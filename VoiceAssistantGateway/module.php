@@ -30,29 +30,28 @@ class VoiceAssistantGateway extends IPSModule
     }
 
     /**
-     * DataFlow Entrance point (ReceiveData)
-     * This method receives data from the Child Device (SendDataToParent)
+     * DataFlow Entrance point (ForwardData)
+     * This method receives data from the Child Device (SendDataToParent) directed UPWARDS.
      */
-    public function ReceiveData($JSONString)
+    public function ForwardData($JSONString)
     {
-        $this->SendDebug('ReceiveData', 'Received JSON: ' . $JSONString, 0);
+        $this->SendDebug('ForwardData', 'Received JSON: ' . $JSONString, 0);
         $data = json_decode($JSONString, true);
         
-        // Validate DataID
+        // Validate DataID (must match what we expect from children)
         if (!isset($data['DataID'])) {
-            $this->SendDebug('ReceiveData Error', 'No DataID found in JSON', 0);
+            $this->SendDebug('ForwardData Error', 'No DataID found in JSON', 0);
             return '';
         }
 
-        // Optional: Check if DataID matches what we implement
-        if ($data['DataID'] !== '{E6892CCF-7622-4217-9150-C1DE886296DD}') {
-            $this->SendDebug('ReceiveData Error', 'DataID mismatch: ' . $data['DataID'], 0);
-            // We usually don't return here if we want to be flexible, but IPS might warn if mismatch happens before calling.
+        if ($data['DataID'] !== '{597658C0-741E-47C2-AF94-734B0B7F839A}') {
+            $this->SendDebug('ForwardData Error', 'DataID mismatch. Expected {597658C0-...}, got ' . $data['DataID'], 0);
+            return '';
         }
 
         $function = $data['Function'];
         $buffer = $data['Buffer'];
-        $this->SendDebug('ReceiveData', 'Executing Function: ' . $function, 0);
+        $this->SendDebug('ForwardData', 'Executing Function: ' . $function, 0);
 
         switch ($function) {
             case 'ForwardToLLM':
@@ -60,7 +59,7 @@ class VoiceAssistantGateway extends IPSModule
             case 'ForwardToElevenLabs':
                 return $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
             default:
-                $this->SendDebug('ReceiveData Error', 'Unknown Function: ' . $function, 0);
+                $this->SendDebug('ForwardData Error', 'Unknown Function: ' . $function, 0);
                 return '';
         }
     }

@@ -73,7 +73,7 @@ class VoiceCharacterDevice extends IPSModule
         $this->SendDebug('Speak', 'Sending LLM Request to Parent...', 0);
         
         $enhancedText = $this->SendDataToParent(json_encode([
-            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // Parent (Gateway) Interface ID
+            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID (matches Gateway's childRequirements)
             'Function' => 'ForwardToLLM',
             'Buffer' => [
                 'SystemPrompt' => $systemPrompt,
@@ -94,7 +94,7 @@ class VoiceCharacterDevice extends IPSModule
         $this->SendDebug('Speak', 'Sending ElevenLabs Request to Parent...', 0);
         
         $audioStream = $this->SendDataToParent(json_encode([
-            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // Parent (Gateway) Interface ID
+            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID (matches Gateway's childRequirements)
             'Function' => 'ForwardToElevenLabs',
             'Buffer' => [
                 'Text' => $enhancedText,
