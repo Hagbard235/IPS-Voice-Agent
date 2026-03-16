@@ -1,0 +1,11 @@
+{
+  "id": "{7BFFFECA-F3F3-E84E-5D3E-51E1389DDBA2}",
+  "name": "Voice Assistant Gateway",
+  "type": 3,
+  "vendor": "Antigravity",
+  "aliases": ["VoiceAssistantGateway"],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "VAG"
+}

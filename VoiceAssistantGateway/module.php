@@ -40,9 +40,9 @@ class VoiceAssistantGateway extends IPSModule
         }
 
         // Call the Speak function on the Child Device via IPS_RequestAction or direct call if available
-        // Note: For custom module functions, usually we use the prefix. E.g., VAF_Speak
-        // Assuming prefix is 'VAF'
-        $mediaId = VAF_Speak($defaultCharacterId, $EventName, $BaseText);
+        // Note: For custom module functions, usually we use the prefix. E.g., VAC_Speak
+        // Assuming prefix is 'VAC'
+        $mediaId = VAC_Speak($defaultCharacterId, $EventName, $BaseText);
 
         if ($mediaId > 0) {
             $this->SetValue('LastSpokenText', $BaseText);

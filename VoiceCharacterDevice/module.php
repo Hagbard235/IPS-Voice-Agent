@@ -115,8 +115,8 @@ class VoiceCharacterDevice extends IPSModule
 
         // Call Parent Methods using reflection/direct Call if possible, or standard IPS_RequestAction if defined in form.
         // Actually, the cleanest way in IPS for Parent calls from Child without complex DataFlow is using the parent's module functions:
-        // Assume Gateway module has prefix VAFGateway:
-        $enhancedText = VAFGateway_ForwardToLLM($parentID, $systemPrompt, $BaseText, $EventName);
+        // Assume Gateway module has prefix VAG:
+        $enhancedText = VAG_ForwardToLLM($parentID, $systemPrompt, $BaseText, $EventName);
 
         if (empty($enhancedText)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
@@ -126,7 +126,7 @@ class VoiceCharacterDevice extends IPSModule
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
         
-        $audioStream = VAFGateway_ForwardToElevenLabs($parentID, $enhancedText, $voiceId, $modelId);
+        $audioStream = VAG_ForwardToElevenLabs($parentID, $enhancedText, $voiceId, $modelId);
 
         if (empty($audioStream)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
