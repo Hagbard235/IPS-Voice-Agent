@@ -45,9 +45,12 @@ class VoiceCharacterDevice extends IPSModule
         $maxVariations = $this->ReadPropertyInteger('Max_Variations');
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID . DIRECTORY_SEPARATOR;
 
+        $this->SendDebug('Speak', "Event: $EventName | Text: $BaseText", 0);
+
         $searchPattern = $dir . $EventName . '_*.mp3';
         $existingFiles = glob($searchPattern);
         $fileCount = $existingFiles !== false ? count($existingFiles) : 0;
+        $this->SendDebug('Speak', "Found $fileCount existing variations.", 0);
 
         // 1. Cache Check
         if ($fileCount >= $maxVariations && $fileCount > 0) {
@@ -67,9 +70,10 @@ class VoiceCharacterDevice extends IPSModule
 
         // 3. LLM API Call via DataFlow
         $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
+        $this->SendDebug('Speak', 'Sending LLM Request to Parent...', 0);
         
         $enhancedText = $this->SendDataToParent(json_encode([
-            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID
+            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // Parent (Gateway) Interface ID
             'Function' => 'ForwardToLLM',
             'Buffer' => [
                 'SystemPrompt' => $systemPrompt,
@@ -78,6 +82,8 @@ class VoiceCharacterDevice extends IPSModule
             ]
         ]));
 
+        $this->SendDebug('Speak', 'LLM Result: ' . (empty($enhancedText) ? 'FAIL' : 'OK'), 0);
+
         if (empty($enhancedText)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
@@ -85,9 +91,10 @@ class VoiceCharacterDevice extends IPSModule
         // 4. ElevenLabs API Call via DataFlow
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
+        $this->SendDebug('Speak', 'Sending ElevenLabs Request to Parent...', 0);
         
         $audioStream = $this->SendDataToParent(json_encode([
-            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID
+            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // Parent (Gateway) Interface ID
             'Function' => 'ForwardToElevenLabs',
             'Buffer' => [
                 'Text' => $enhancedText,
@@ -95,6 +102,8 @@ class VoiceCharacterDevice extends IPSModule
                 'ModelID' => $modelId
             ]
         ]));
+
+        $this->SendDebug('Speak', 'ElevenLabs Result: ' . (empty($audioStream) ? 'FAIL' : 'Binary Stream (' . strlen($audioStream) . ' bytes)'), 0);
 
         if (empty($audioStream)) {
             return $this->FallbackToCache($existingFiles, $BaseText);

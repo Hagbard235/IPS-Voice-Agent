@@ -30,19 +30,23 @@ class VoiceAssistantGateway extends IPSModule
     }
 
     /**
-     * DataFlow Entrance point (ReceiveData)
+     * DataFlow Entrance point (ForwardData)
+     * This method receives data from the Child Device (SendDataToParent)
      */
-    public function ReceiveData($JSONString)
+    public function ForwardData($JSONString)
     {
+        $this->SendDebug('ForwardData', 'Received JSON: ' . $JSONString, 0);
         $data = json_decode($JSONString, true);
         
-        // Validate DataID (must match Voice-Device interface)
-        if ($data['DataID'] !== '{597658C0-741E-47C2-AF94-734B0B7F839A}') {
+        // Validate DataID
+        if (!isset($data['DataID'])) {
+            $this->SendDebug('ForwardData Error', 'No DataID found in JSON', 0);
             return '';
         }
 
         $function = $data['Function'];
         $buffer = $data['Buffer'];
+        $this->SendDebug('ForwardData', 'Function: ' . $function, 0);
 
         switch ($function) {
             case 'ForwardToLLM':
@@ -50,7 +54,7 @@ class VoiceAssistantGateway extends IPSModule
             case 'ForwardToElevenLabs':
                 return $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
             default:
-                $this->SendDebug('ReceiveData', 'Unknown Function: ' . $function, 0);
+                $this->SendDebug('ForwardData Error', 'Unknown Function: ' . $function, 0);
                 return '';
         }
     }
@@ -85,6 +89,7 @@ class VoiceAssistantGateway extends IPSModule
      */
     public function ForwardToLLM(string $SystemPrompt, string $BaseText, string $EventName): string
     {
+        $this->SendDebug('ForwardToLLM', "Prompt: $SystemPrompt | Event: $EventName", 0);
         $apiKey = $this->ReadPropertyString('OpenAIKey');
         $url = $this->ReadPropertyString('LLM_Base_URL');
         $model = $this->ReadPropertyString('LLM_Model');
@@ -139,9 +144,11 @@ class VoiceAssistantGateway extends IPSModule
      */
     public function ForwardToElevenLabs(string $Text, string $VoiceID, string $ModelID): string
     {
+        $this->SendDebug('ForwardToElevenLabs', "VoiceID: $VoiceID | Text (excerpt): " . substr($Text, 0, 50) . "...", 0);
         $apiKey = $this->ReadPropertyString('ElevenLabsKey');
         
         if (empty($apiKey) || empty($VoiceID)) {
+            $this->SendDebug('ForwardToElevenLabs Error', 'API Key or VoiceID missing', 0);
             IPS_LogMessage('VoiceAssistantGateway', 'ElevenLabs API Key or Voice ID is empty.');
             return '';
         }
