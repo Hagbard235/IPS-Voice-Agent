@@ -1,10 +1,10 @@
 {
-  "id": "{3EEA73D5-3E11-9257-8C5F-F8F6EF40F055}",
+  "id": "{A0C28A1C-8A5E-4B0F-BF1F-9D4539824C33}",
   "name": "Voice Character Device",
   "type": 0,
   "vendor": "Antigravity",
   "aliases": ["VoiceCharacterDevice"],
-  "parentRequirements": ["{7BFFFECA-F3F3-E84E-5D3E-51E1389DDBA2}"],
+  "parentRequirements": ["{9F4876F2-4F54-460B-A53E-74B8D56184C0}"],
   "childRequirements": [],
   "implemented": [],
   "prefix": "VAC"

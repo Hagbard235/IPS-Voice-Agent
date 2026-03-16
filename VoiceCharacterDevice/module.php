@@ -9,7 +9,7 @@ class VoiceCharacterDevice extends IPSModule
         // Never delete this line!
         parent::Create();
 
-        $this->ConnectParent('{7BFFFECA-F3F3-E84E-5D3E-51E1389DDBA2}'); // Connection to Gateway
+        $this->ConnectParent('{9F4876F2-4F54-460B-A53E-74B8D56184C0}'); // Connection to Gateway
 
         $this->RegisterPropertyString('Name', 'New Character');
         $this->RegisterPropertyString('Voice_ID', '');
