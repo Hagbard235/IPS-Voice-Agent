@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class VoiceDevice extends IPSModule
+class VoiceCharacterDevice extends IPSModule
 {
     public function Create()
     {
@@ -62,7 +62,7 @@ class VoiceDevice extends IPSModule
         }
 
         if (!$this->HasActiveParent()) {
-            IPS_LogMessage('VoiceDevice', 'Kein übergeordnetes Gateway gefunden.');
+            IPS_LogMessage('VoiceCharacterDevice', 'Kein übergeordnetes Gateway gefunden.');
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
@@ -123,13 +123,13 @@ class VoiceDevice extends IPSModule
             $randomFile = $existingFiles[array_rand($existingFiles)];
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
             if ($mediaId > 0) {
-                IPS_LogMessage('VoiceDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
+                IPS_LogMessage('VoiceCharacterDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
                 $this->UpdateStatusVariables($baseText, $mediaId);
                 return $mediaId;
             }
         }
         
-        IPS_LogMessage('VoiceDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
+        IPS_LogMessage('VoiceCharacterDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
         return 0;
     }
 

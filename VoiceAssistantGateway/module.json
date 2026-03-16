@@ -3,7 +3,7 @@
   "name": "Voice Assistant Gateway",
   "type": 2,
   "vendor": "Antigravity",
-  "aliases": ["VoiceAssistantGateway"],
+  "aliases": ["VoiceGateway"],
   "parentRequirements": [],
   "childRequirements": [],
   "implemented": [],

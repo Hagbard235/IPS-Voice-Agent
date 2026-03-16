@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class VoiceGateway extends IPSModule
+class VoiceAssistantGateway extends IPSModule
 {
     public function Create()
     {
@@ -35,11 +35,12 @@ class VoiceGateway extends IPSModule
 
         if ($defaultCharacterId == 0 || !IPS_InstanceExists($defaultCharacterId)) {
             $this->SendDebug('Error', 'No valid default character specified.', 0);
-            IPS_LogMessage('VoiceGateway', 'Die Speak-Funktion wurde aufgerufen, aber es ist kein gültiger Standard-Charakter hinterlegt.');
+            IPS_LogMessage('VoiceAssistantGateway', 'Die Speak-Funktion wurde aufgerufen, aber es ist kein gültiger Standard-Charakter hinterlegt.');
             return 0;
         }
 
         // Call the Speak function on the Child Device via prefix IVD
+        // Note: We use the prefix from module.json for the Child
         $mediaId = IVD_Speak($defaultCharacterId, $EventName, $BaseText);
 
         if ($mediaId > 0) {
@@ -57,7 +58,7 @@ class VoiceGateway extends IPSModule
     {
         $apiKey = $this->ReadPropertyString('OpenAIKey');
         if (empty($apiKey)) {
-            IPS_LogMessage('VoiceGateway', 'OpenAI API Key is empty.');
+            IPS_LogMessage('VoiceAssistantGateway', 'OpenAI API Key is empty.');
             return '';
         }
 
@@ -88,7 +89,7 @@ class VoiceGateway extends IPSModule
 
         if ($response === false || $httpCode >= 400) {
             $this->SendDebug('ForwardToLLM Error', "HTTP $httpCode - cURL Error: $error - Response: $response", 0);
-            IPS_LogMessage('VoiceGateway', "LLM API Error: $httpCode - $response");
+            IPS_LogMessage('VoiceAssistantGateway', "LLM API Error: $httpCode - $response");
             return '';
         }
 
@@ -107,7 +108,7 @@ class VoiceGateway extends IPSModule
     {
         $apiKey = $this->ReadPropertyString('ElevenLabsKey');
         if (empty($apiKey) || empty($VoiceID)) {
-            IPS_LogMessage('VoiceGateway', 'ElevenLabs API Key or Voice ID is empty.');
+            IPS_LogMessage('VoiceAssistantGateway', 'ElevenLabs API Key or Voice ID is empty.');
             return '';
         }
 
@@ -138,7 +139,7 @@ class VoiceGateway extends IPSModule
 
         if ($response === false || $httpCode >= 400) {
             $this->SendDebug('ForwardToElevenLabs Error', "HTTP $httpCode - cURL Error: $error - Response: $response", 0);
-            IPS_LogMessage('VoiceGateway', "ElevenLabs API Error: $httpCode - $response");
+            IPS_LogMessage('VoiceAssistantGateway', "ElevenLabs API Error: $httpCode - $response");
             return '';
         }
 

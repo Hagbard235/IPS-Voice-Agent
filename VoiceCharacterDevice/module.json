@@ -3,7 +3,7 @@
   "name": "Voice Character Device",
   "type": 0,
   "vendor": "Antigravity",
-  "aliases": ["VoiceCharacterDevice"],
+  "aliases": ["VoiceDevice"],
   "parentRequirements": ["{3E2C3D4E-5F6A-4B7C-9D8E-0F1A2B3C4D5E}"],
   "childRequirements": [],
   "implemented": [],
