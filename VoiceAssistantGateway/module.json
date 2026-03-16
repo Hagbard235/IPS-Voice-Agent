@@ -5,7 +5,7 @@
   "vendor": "Andre Schmidt",
   "aliases": ["VoiceAssistantGateway"],
   "parentRequirements": [],
-  "childRequirements": [],
+  "childRequirements": ["{0b79ed11-f56e-4c1d-8435-ebc8f0d1c588}"],
   "implemented": ["{3E2C3D4E-5F6A-4B7C-9D8E-0F1A2B3C4D5E}"],
   "prefix": "IVG"
 }
