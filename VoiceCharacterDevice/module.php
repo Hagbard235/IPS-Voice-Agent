@@ -2,8 +2,7 @@
 
 declare(strict_types=1);
 
-class VoiceDevice extends IPSModule
-{
+class VoiceCharacterDevice extends IPSModule{
     public function Create()
     {
         // Never delete this line!
