@@ -15,7 +15,7 @@
       "type": "SelectInstance",
       "name": "DefaultCharacter_ID",
       "caption": "Default Voice Character",
-      "moduleID": "{A0C28A1C-8A5E-4B0F-BF1F-9D4539824C33}"
+      "moduleID": "{C251937A-94B6-4E80-87B7-C45B9642D3D2}"
     }
   ],
   "actions":
