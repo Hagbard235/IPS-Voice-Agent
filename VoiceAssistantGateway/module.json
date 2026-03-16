@@ -3,7 +3,7 @@
   "name": "Voice Assistant Gateway",
   "type": 2,
   "vendor": "Andre Schmidt",
-  "aliases": ["VoiceAssistantGateway", "Voice Gateway"],
+  "aliases": ["VoiceAssistantGateway"],
   "parentRequirements": [],
   "childRequirements": [],
   "implemented": ["{3E2C3D4E-5F6A-4B7C-9D8E-0F1A2B3C4D5E}"],
