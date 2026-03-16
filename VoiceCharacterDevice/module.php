@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class VoiceCharacterDevice extends IPSModule
+class VoiceDevice extends IPSModule
 {
     public function Create()
     {
@@ -19,9 +19,8 @@ class VoiceCharacterDevice extends IPSModule
         // Status Variables specific to the character
         $this->RegisterVariableString('LastSpokenText', 'Last Spoken Text', '', 10);
         $this->RegisterVariableInteger('LastMediaID', 'Last Media ID', '', 20);
-
-        // Create the media directory for this instance if it does not exist yet
-        $this->CreateMediaDirectory();
+        
+        // Ordner-Erstellung aus Create() entfernt!
     }
 
     public function ApplyChanges()
@@ -32,8 +31,9 @@ class VoiceCharacterDevice extends IPSModule
         $this->CreateMediaDirectory();
     }
 
-    private function CreateMediaDirectory()
+    private function CreateMediaDirectory(): void
     {
+        // Für echte Dateisystem-Operationen ist DIRECTORY_SEPARATOR korrekt
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID;
         if (!is_dir($dir)) {
             mkdir($dir, 0777, true);
@@ -52,6 +52,7 @@ class VoiceCharacterDevice extends IPSModule
         $existingFiles = glob($searchPattern);
         $fileCount = $existingFiles !== false ? count($existingFiles) : 0;
 
+        // 1. Cache Check
         if ($fileCount >= $maxVariations && $fileCount > 0) {
             $randomFile = $existingFiles[array_rand($existingFiles)];
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
@@ -61,8 +62,9 @@ class VoiceCharacterDevice extends IPSModule
             }
         }
 
+        // 2. Parent / Gateway Validierung
         if (!$this->HasActiveParent()) {
-            IPS_LogMessage('VoiceCharacterDevice', 'Kein übergeordnetes Gateway gefunden.');
+            IPS_LogMessage('VoiceDevice', 'Kein aktives Gateway gefunden.');
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
@@ -71,14 +73,15 @@ class VoiceCharacterDevice extends IPSModule
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
+        // 3. LLM API Call
         $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
-        // Call Parent Methods using prefix IVG
         $enhancedText = IVG_ForwardToLLM($parentID, $systemPrompt, $BaseText, $EventName);
 
         if (empty($enhancedText)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
+        // 4. ElevenLabs API Call
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
         
@@ -88,15 +91,22 @@ class VoiceCharacterDevice extends IPSModule
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
+        // 5. Speichern und Registrieren
         $newFilename = $EventName . '_' . ($fileCount + 1) . '.mp3';
         $fullFilePath = $dir . $newFilename;
         file_put_contents($fullFilePath, $audioStream);
 
-        $mediaId = IPS_CreateMedia(1);
-        IPS_SetParent($mediaId, $this->InstanceID);
-        IPS_SetName($mediaId, $EventName . ' - Variation ' . ($fileCount + 1));
+        // Recycling: Existiert das Media Objekt schon?
+        $mediaId = $this->GetMediaIdByFilename($newFilename);
         
-        $relativeMediaDir = 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID . DIRECTORY_SEPARATOR;
+        if ($mediaId === 0) {
+            $mediaId = IPS_CreateMedia(1);
+            IPS_SetParent($mediaId, $this->InstanceID);
+            IPS_SetName($mediaId, $EventName . ' - Variation ' . ($fileCount + 1));
+        }
+        
+        // ZWINGEND: Forward Slashes für die IPS Media-Registrierung
+        $relativeMediaDir = 'media/voice_' . $this->InstanceID . '/';
         IPS_SetMediaFile($mediaId, $relativeMediaDir . $newFilename, false);
 
         $this->UpdateStatusVariables($BaseText, $mediaId);
@@ -123,17 +133,17 @@ class VoiceCharacterDevice extends IPSModule
             $randomFile = $existingFiles[array_rand($existingFiles)];
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
             if ($mediaId > 0) {
-                IPS_LogMessage('VoiceCharacterDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
+                IPS_LogMessage('VoiceDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
                 $this->UpdateStatusVariables($baseText, $mediaId);
                 return $mediaId;
             }
         }
         
-        IPS_LogMessage('VoiceCharacterDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
+        IPS_LogMessage('VoiceDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
         return 0;
     }
 
-    private function UpdateStatusVariables(string $text, int $mediaId)
+    private function UpdateStatusVariables(string $text, int $mediaId): void
     {
         $this->SetValue('LastSpokenText', $text);
         $this->SetValue('LastMediaID', $mediaId);
