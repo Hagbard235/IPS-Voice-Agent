@@ -1,7 +1,7 @@
 {
   "id": "{3EEA73D5-3E11-9257-8C5F-F8F6EF40F055}",
   "name": "Voice Character Device",
-  "type": 3,
+  "type": 0,
   "vendor": "Antigravity",
   "aliases": ["VoiceCharacterDevice"],
   "parentRequirements": ["{7BFFFECA-F3F3-E84E-5D3E-51E1389DDBA2}"],
