@@ -1,0 +1,47 @@
+{
+  "elements":
+  [
+    {
+      "type": "ValidationTextBox",
+      "name": "Name",
+      "caption": "Character Name"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "Voice_ID",
+      "caption": "ElevenLabs Voice ID"
+    },
+    {
+      "type": "Select",
+      "name": "Model_ID",
+      "caption": "ElevenLabs Model",
+      "options": [
+        { "caption": "eleven_multilingual_v3", "value": "eleven_multilingual_v3" },
+        { "caption": "eleven_multilingual_v2", "value": "eleven_multilingual_v2" },
+        { "caption": "eleven_monolingual_v1", "value": "eleven_monolingual_v1" }
+      ]
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "LLM_SystemPrompt",
+      "caption": "LLM System Prompt (Director's Note)"
+    },
+    {
+      "type": "SelectMedia",
+      "name": "Character_Image",
+      "caption": "Character Image (Optional)"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "Max_Variations",
+      "caption": "Max Variations per Event",
+      "minimum": 1
+    }
+  ],
+  "actions":
+  [
+  ],
+  "status":
+  [
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "elements":
+  [
+    {
+      "type": "PasswordTextBox",
+      "name": "OpenAIKey",
+      "caption": "OpenAI API Key"
+    },
+    {
+      "type": "PasswordTextBox",
+      "name": "ElevenLabsKey",
+      "caption": "ElevenLabs API Key"
+    },
+    {
+      "type": "SelectInstance",
+      "name": "DefaultCharacter_ID",
+      "caption": "Default Voice Character",
+      "moduleID": "{3EEA73D5-3E11-9257-8C5F-F8F6EF40F055}"
+    }
+  ],
+  "actions":
+  [
+  ],
+  "status":
+  [
+  ]
+}
