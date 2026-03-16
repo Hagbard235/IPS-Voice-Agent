@@ -30,23 +30,29 @@ class VoiceAssistantGateway extends IPSModule
     }
 
     /**
-     * DataFlow Entrance point (ForwardData)
+     * DataFlow Entrance point (ReceiveData)
      * This method receives data from the Child Device (SendDataToParent)
      */
-    public function ForwardData($JSONString)
+    public function ReceiveData($JSONString)
     {
-        $this->SendDebug('ForwardData', 'Received JSON: ' . $JSONString, 0);
+        $this->SendDebug('ReceiveData', 'Received JSON: ' . $JSONString, 0);
         $data = json_decode($JSONString, true);
         
         // Validate DataID
         if (!isset($data['DataID'])) {
-            $this->SendDebug('ForwardData Error', 'No DataID found in JSON', 0);
+            $this->SendDebug('ReceiveData Error', 'No DataID found in JSON', 0);
             return '';
+        }
+
+        // Optional: Check if DataID matches what we implement
+        if ($data['DataID'] !== '{E6892CCF-7622-4217-9150-C1DE886296DD}') {
+            $this->SendDebug('ReceiveData Error', 'DataID mismatch: ' . $data['DataID'], 0);
+            // We usually don't return here if we want to be flexible, but IPS might warn if mismatch happens before calling.
         }
 
         $function = $data['Function'];
         $buffer = $data['Buffer'];
-        $this->SendDebug('ForwardData', 'Function: ' . $function, 0);
+        $this->SendDebug('ReceiveData', 'Executing Function: ' . $function, 0);
 
         switch ($function) {
             case 'ForwardToLLM':
@@ -54,7 +60,7 @@ class VoiceAssistantGateway extends IPSModule
             case 'ForwardToElevenLabs':
                 return $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
             default:
-                $this->SendDebug('ForwardData Error', 'Unknown Function: ' . $function, 0);
+                $this->SendDebug('ReceiveData Error', 'Unknown Function: ' . $function, 0);
                 return '';
         }
     }
