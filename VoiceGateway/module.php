@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class VoiceAssistantGateway extends IPSModule
+class VoiceGateway extends IPSModule
 {
     public function Create()
     {
@@ -35,14 +35,12 @@ class VoiceAssistantGateway extends IPSModule
 
         if ($defaultCharacterId == 0 || !IPS_InstanceExists($defaultCharacterId)) {
             $this->SendDebug('Error', 'No valid default character specified.', 0);
-            IPS_LogMessage('VoiceAssistantGateway', 'Die Speak-Funktion wurde aufgerufen, aber es ist kein gültiger Standard-Charakter hinterlegt.');
+            IPS_LogMessage('VoiceGateway', 'Die Speak-Funktion wurde aufgerufen, aber es ist kein gültiger Standard-Charakter hinterlegt.');
             return 0;
         }
 
-        // Call the Speak function on the Child Device via IPS_RequestAction or direct call if available
-        // Note: For custom module functions, usually we use the prefix. E.g., VCH_Speak
-        // Assuming prefix is 'VCH'
-        $mediaId = VCH_Speak($defaultCharacterId, $EventName, $BaseText);
+        // Call the Speak function on the Child Device via prefix IVD
+        $mediaId = IVD_Speak($defaultCharacterId, $EventName, $BaseText);
 
         if ($mediaId > 0) {
             $this->SetValue('LastSpokenText', $BaseText);
@@ -59,13 +57,13 @@ class VoiceAssistantGateway extends IPSModule
     {
         $apiKey = $this->ReadPropertyString('OpenAIKey');
         if (empty($apiKey)) {
-            IPS_LogMessage('VoiceAssistantGateway', 'OpenAI API Key is empty.');
+            IPS_LogMessage('VoiceGateway', 'OpenAI API Key is empty.');
             return '';
         }
 
         $url = 'https://api.openai.com/v1/chat/completions';
         $data = [
-            'model' => 'gpt-4o', // Or configurable
+            'model' => 'gpt-4o',
             'messages' => [
                 ['role' => 'system', 'content' => $SystemPrompt . "\n\nWICHTIG: Antworte immer mit Text, der ElevenLabs Emotion-Tags in englisch und in eckigen Klammern enthält (z.B. [laughs])."],
                 ['role' => 'user', 'content' => "Ereignis: $EventName. Text: $BaseText"]
@@ -90,7 +88,7 @@ class VoiceAssistantGateway extends IPSModule
 
         if ($response === false || $httpCode >= 400) {
             $this->SendDebug('ForwardToLLM Error', "HTTP $httpCode - cURL Error: $error - Response: $response", 0);
-            IPS_LogMessage('VoiceAssistantGateway', "LLM API Error: $httpCode - $response");
+            IPS_LogMessage('VoiceGateway', "LLM API Error: $httpCode - $response");
             return '';
         }
 
@@ -109,7 +107,7 @@ class VoiceAssistantGateway extends IPSModule
     {
         $apiKey = $this->ReadPropertyString('ElevenLabsKey');
         if (empty($apiKey) || empty($VoiceID)) {
-            IPS_LogMessage('VoiceAssistantGateway', 'ElevenLabs API Key or Voice ID is empty.');
+            IPS_LogMessage('VoiceGateway', 'ElevenLabs API Key or Voice ID is empty.');
             return '';
         }
 
@@ -118,13 +116,9 @@ class VoiceAssistantGateway extends IPSModule
         }
 
         $url = 'https://api.elevenlabs.io/v1/text-to-speech/' . $VoiceID;
-        // In v3 we can just map text to text and it parses the tags automatically?
-        // Wait, for v2 it was normal, v3 might require special body attributes or just text.
-        // Based on concept, just direct call with text. 
         $data = [
             'text' => $Text,
             'model_id' => $ModelID,
-            // Depending on v3 specifics, maybe output_format needed
         ];
 
         $ch = curl_init($url);
@@ -135,7 +129,7 @@ class VoiceAssistantGateway extends IPSModule
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30); // TTS can take a bit longer
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -144,10 +138,10 @@ class VoiceAssistantGateway extends IPSModule
 
         if ($response === false || $httpCode >= 400) {
             $this->SendDebug('ForwardToElevenLabs Error', "HTTP $httpCode - cURL Error: $error - Response: $response", 0);
-            IPS_LogMessage('VoiceAssistantGateway', "ElevenLabs API Error: $httpCode - $response");
+            IPS_LogMessage('VoiceGateway', "ElevenLabs API Error: $httpCode - $response");
             return '';
         }
 
-        return $response; // Return binary stream
+        return $response;
     }
 }

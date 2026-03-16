@@ -1,11 +1,11 @@
 {
-  "id": "{C251937A-94B6-4E80-87B7-C45B9642D3D2}",
+  "id": "{4F3D4E5F-6A7B-4C8D-0E9F-1A2B3C4D5E6F}",
   "name": "Voice Character Device",
   "type": 0,
   "vendor": "Antigravity",
   "aliases": ["VoiceCharacterDevice"],
-  "parentRequirements": ["{8A14937A-94B6-4E80-87B7-C45B9642D3D2}"],
+  "parentRequirements": ["{3E2C3D4E-5F6A-4B7C-9D8E-0F1A2B3C4D5E}"],
   "childRequirements": [],
   "implemented": [],
-  "prefix": "VCH"
+  "prefix": "IVD"
 }
