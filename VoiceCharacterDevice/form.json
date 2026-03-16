@@ -24,7 +24,9 @@
     {
       "type": "ValidationTextBox",
       "name": "LLM_SystemPrompt",
-      "caption": "LLM System Prompt (Director's Note)"
+      "caption": "LLM System Prompt (Director's Note)",
+      "multiline": true,
+      "width": "100%"
     },
     {
       "type": "SelectMedia",
@@ -40,8 +42,62 @@
   ],
   "actions":
   [
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: Speak (Vollständiger Durchlauf)",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TestSpeak_Event",
+          "caption": "Event Name",
+          "value": "test_greeting"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestSpeak_Text",
+          "caption": "Text",
+          "value": "Es ist Zeit aufzustehen!"
+        },
+        {
+          "type": "Button",
+          "caption": "🚀 Speak Test starten",
+          "onClick": "echo IVD_TestSpeak($id, $TestSpeak_Event, $TestSpeak_Text);"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: DataFlow zum Gateway",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TestDF_Text",
+          "caption": "Test-Text",
+          "value": "Hallo Welt!"
+        },
+        {
+          "type": "Button",
+          "caption": "🚀 DataFlow Test (nur LLM)",
+          "onClick": "echo IVD_TestDataFlow($id, $TestDF_Text);"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "ℹ️ Diagnose",
+      "items": [
+        {
+          "type": "Button",
+          "caption": "📊 Status prüfen",
+          "onClick": "echo IVD_GetDiagnostics($id);"
+        }
+      ]
+    }
   ],
   "status":
   [
+    { "code": 102, "icon": "active", "caption": "Charakter aktiv" },
+    { "code": 200, "icon": "error", "caption": "Konfiguration unvollständig" },
+    { "code": 201, "icon": "error", "caption": "Kein Gateway verbunden" }
   ]
 }

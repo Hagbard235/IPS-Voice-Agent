@@ -28,6 +28,92 @@
       "moduleID": "{4F3D4E5F-6A7B-4C8D-0E9F-1A2B3C4D5E6F}"
     }
   ],
-  "actions": [],
-  "status": []
+  "actions":
+  [
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: LLM API",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TestLLM_Prompt",
+          "caption": "System Prompt",
+          "value": "Du bist ein sarkastischer Butler."
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestLLM_Text",
+          "caption": "Text / Nachricht",
+          "value": "Guten Morgen!"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestLLM_Event",
+          "caption": "Event Name",
+          "value": "greeting"
+        },
+        {
+          "type": "Button",
+          "caption": "🚀 LLM Test senden",
+          "onClick": "echo IVG_TestLLM($id, $TestLLM_Prompt, $TestLLM_Text, $TestLLM_Event);"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: ElevenLabs TTS",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TestTTS_Text",
+          "caption": "Text für Sprachsynthese",
+          "value": "[cheerfully] Guten Morgen, Meister! Was darf es sein?"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestTTS_VoiceID",
+          "caption": "Voice ID"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestTTS_ModelID",
+          "caption": "Model ID",
+          "value": "eleven_multilingual_v2"
+        },
+        {
+          "type": "Button",
+          "caption": "🚀 TTS Test senden",
+          "onClick": "echo IVG_TestTTS($id, $TestTTS_Text, $TestTTS_VoiceID, $TestTTS_ModelID);"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: Speak (Vollständiger Durchlauf)",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TestSpeak_Event",
+          "caption": "Event Name",
+          "value": "test_greeting"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "TestSpeak_Text",
+          "caption": "Text",
+          "value": "Es ist Zeit aufzustehen!"
+        },
+        {
+          "type": "Button",
+          "caption": "🚀 Speak Test starten",
+          "onClick": "echo IVG_TestSpeak($id, $TestSpeak_Event, $TestSpeak_Text);"
+        }
+      ]
+    }
+  ],
+  "status":
+  [
+    { "code": 102, "icon": "active", "caption": "Gateway aktiv" },
+    { "code": 200, "icon": "error", "caption": "Konfiguration unvollständig" }
+  ]
 }
