@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-class VoiceCharacterDevice extends IPSModule{
+class VoiceCharacterDevice extends IPSModule
+{
     public function Create()
     {
         // Never delete this line!
@@ -18,8 +19,6 @@ class VoiceCharacterDevice extends IPSModule{
         // Status Variables specific to the character
         $this->RegisterVariableString('LastSpokenText', 'Last Spoken Text', '', 10);
         $this->RegisterVariableInteger('LastMediaID', 'Last Media ID', '', 20);
-        
-        // Ordner-Erstellung aus Create() entfernt!
     }
 
     public function ApplyChanges()
@@ -32,7 +31,6 @@ class VoiceCharacterDevice extends IPSModule{
 
     private function CreateMediaDirectory(): void
     {
-        // Für echte Dateisystem-Operationen ist DIRECTORY_SEPARATOR korrekt
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID;
         if (!is_dir($dir)) {
             mkdir($dir, 0777, true);
@@ -63,35 +61,47 @@ class VoiceCharacterDevice extends IPSModule{
 
         // 2. Parent / Gateway Validierung
         if (!$this->HasActiveParent()) {
-            IPS_LogMessage('VoiceDevice', 'Kein aktives Gateway gefunden.');
+            IPS_LogMessage('VoiceCharacterDevice', 'Kein aktives Gateway gefunden.');
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
-        $parentID = IPS_GetInstance($this->InstanceID)['ConnectionID'];
-        if ($parentID == 0) {
-            return $this->FallbackToCache($existingFiles, $BaseText);
-        }
-
-        // 3. LLM API Call
+        // 3. LLM API Call via DataFlow
         $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
-        $enhancedText = IVG_ForwardToLLM($parentID, $systemPrompt, $BaseText, $EventName);
+        
+        $enhancedText = $this->SendDataToParent(json_encode([
+            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID
+            'Function' => 'ForwardToLLM',
+            'Buffer' => [
+                'SystemPrompt' => $systemPrompt,
+                'BaseText' => $BaseText,
+                'EventName' => $EventName
+            ]
+        ]));
 
         if (empty($enhancedText)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
-        // 4. ElevenLabs API Call
+        // 4. ElevenLabs API Call via DataFlow
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
         
-        $audioStream = IVG_ForwardToElevenLabs($parentID, $enhancedText, $voiceId, $modelId);
+        $audioStream = $this->SendDataToParent(json_encode([
+            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}', // Device-Interface ID
+            'Function' => 'ForwardToElevenLabs',
+            'Buffer' => [
+                'Text' => $enhancedText,
+                'VoiceID' => $voiceId,
+                'ModelID' => $modelId
+            ]
+        ]));
 
         if (empty($audioStream)) {
             return $this->FallbackToCache($existingFiles, $BaseText);
         }
 
         // 5. Speichern und Registrieren
-        $newFilename = $EventName . '_' . ($fileCount + 1) . '.mp3';
+        $newFilename = $EventName . '_' . ($fileCount + 1) . ".mp3";
         $fullFilePath = $dir . $newFilename;
         file_put_contents($fullFilePath, $audioStream);
 
@@ -132,13 +142,13 @@ class VoiceCharacterDevice extends IPSModule{
             $randomFile = $existingFiles[array_rand($existingFiles)];
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
             if ($mediaId > 0) {
-                IPS_LogMessage('VoiceDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
+                IPS_LogMessage('VoiceCharacterDevice', 'API Fehler - Verwende gecachte Fallback-Datei.');
                 $this->UpdateStatusVariables($baseText, $mediaId);
                 return $mediaId;
             }
         }
         
-        IPS_LogMessage('VoiceDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
+        IPS_LogMessage('VoiceCharacterDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
         return 0;
     }
 

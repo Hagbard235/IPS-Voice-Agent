@@ -30,6 +30,32 @@ class VoiceAssistantGateway extends IPSModule
     }
 
     /**
+     * DataFlow Entrance point (ReceiveData)
+     */
+    public function ReceiveData($JSONString)
+    {
+        $data = json_decode($JSONString, true);
+        
+        // Validate DataID (must match Voice-Device interface)
+        if ($data['DataID'] !== '{597658C0-741E-47C2-AF94-734B0B7F839A}') {
+            return '';
+        }
+
+        $function = $data['Function'];
+        $buffer = $data['Buffer'];
+
+        switch ($function) {
+            case 'ForwardToLLM':
+                return $this->ForwardToLLM($buffer['SystemPrompt'], $buffer['BaseText'], $buffer['EventName']);
+            case 'ForwardToElevenLabs':
+                return $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
+            default:
+                $this->SendDebug('ReceiveData', 'Unknown Function: ' . $function, 0);
+                return '';
+        }
+    }
+
+    /**
      * Public Speak function for the Gateway.
      * Routes the request to the DefaultCharacter_ID.
      */

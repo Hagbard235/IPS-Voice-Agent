@@ -4,8 +4,8 @@
   "type": 3,
   "vendor": "Andre Schmidt",
   "aliases": ["VoiceCharacterDevice", "Voice Character"],
-  "parentRequirements": ["{3E2C3D4E-5F6A-4B7C-9D8E-0F1A2B3C4D5E}"],
+  "parentRequirements": ["{E6892CCF-7622-4217-9150-C1DE886296DD}"],
   "childRequirements": [],
-  "implemented": [],
+  "implemented": ["{597658C0-741E-47C2-AF94-734B0B7F839A}"],
   "prefix": "IVD"
 }
