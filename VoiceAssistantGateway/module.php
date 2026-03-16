@@ -13,6 +13,10 @@ class VoiceAssistantGateway extends IPSModule
         $this->RegisterPropertyString('OpenAIKey', '');
         $this->RegisterPropertyString('ElevenLabsKey', '');
         $this->RegisterPropertyInteger('DefaultCharacter_ID', 0);
+        
+        // Neu: Konfigurierbares LLM
+        $this->RegisterPropertyString('LLM_Base_URL', 'https://api.openai.com/v1/chat/completions');
+        $this->RegisterPropertyString('LLM_Model', 'gpt-4o-mini');
 
         // Status Variables for Gateway
         $this->RegisterVariableString('LastSpokenText', 'Last Spoken Text', '', 10);
@@ -40,7 +44,6 @@ class VoiceAssistantGateway extends IPSModule
         }
 
         // Call the Speak function on the Child Device via prefix IVD
-        // Note: We use the prefix from module.json for the Child
         $mediaId = IVD_Speak($defaultCharacterId, $EventName, $BaseText);
 
         if ($mediaId > 0) {
@@ -52,19 +55,21 @@ class VoiceAssistantGateway extends IPSModule
     }
 
     /**
-     * Internal function to forward requests to LLM (OpenAI)
+     * Internal function to forward requests to LLM
      */
     public function ForwardToLLM(string $SystemPrompt, string $BaseText, string $EventName): string
     {
         $apiKey = $this->ReadPropertyString('OpenAIKey');
-        if (empty($apiKey)) {
-            IPS_LogMessage('VoiceAssistantGateway', 'OpenAI API Key is empty.');
+        $url = $this->ReadPropertyString('LLM_Base_URL');
+        $model = $this->ReadPropertyString('LLM_Model');
+        
+        if (empty($url)) {
+            IPS_LogMessage('VoiceAssistantGateway', 'LLM Base URL is empty.');
             return '';
         }
 
-        $url = 'https://api.openai.com/v1/chat/completions';
         $data = [
-            'model' => 'gpt-4o',
+            'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $SystemPrompt . "\n\nWICHTIG: Antworte immer mit Text, der ElevenLabs Emotion-Tags in englisch und in eckigen Klammern enthält (z.B. [laughs])."],
                 ['role' => 'user', 'content' => "Ereignis: $EventName. Text: $BaseText"]
@@ -72,11 +77,13 @@ class VoiceAssistantGateway extends IPSModule
             'temperature' => 0.7
         ];
 
+        $headers = ['Content-Type: application/json'];
+        if (!empty($apiKey)) {
+            $headers[] = 'Authorization: Bearer ' . $apiKey;
+        }
+
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey
-        ]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
@@ -107,6 +114,7 @@ class VoiceAssistantGateway extends IPSModule
     public function ForwardToElevenLabs(string $Text, string $VoiceID, string $ModelID): string
     {
         $apiKey = $this->ReadPropertyString('ElevenLabsKey');
+        
         if (empty($apiKey) || empty($VoiceID)) {
             IPS_LogMessage('VoiceAssistantGateway', 'ElevenLabs API Key or Voice ID is empty.');
             return '';
