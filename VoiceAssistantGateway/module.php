@@ -76,8 +76,8 @@ class VoiceAssistantGateway extends IPSModule
 
         $this->SendDebug('│ ForwardData', 'DataID: ' . $data['DataID'], 0);
 
-        if ($data['DataID'] !== '{597658C0-741E-47C2-AF94-734B0B7F839A}') {
-            $this->SendDebug('│ ForwardData ❌', 'DataID-Mismatch! Erwartet: {597658C0-741E-47C2-AF94-734B0B7F839A}', 0);
+        if ($data['DataID'] !== '{E6892CCF-7622-4217-9150-C1DE886296DD}') {
+            $this->SendDebug('│ ForwardData ❌', 'DataID-Mismatch! Erwartet: {E6892CCF-7622-4217-9150-C1DE886296DD} (eigene implemented-GUID)', 0);
             $this->SendDebug('│ ForwardData ❌', 'Erhalten: ' . $data['DataID'], 0);
             $this->SendDebug('└─ ForwardData', '═══════════════════════════════════════', 0);
             return '';

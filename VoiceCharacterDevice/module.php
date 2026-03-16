@@ -111,7 +111,7 @@ class VoiceCharacterDevice extends IPSModule
         $this->SendDebug('│ Speak', '   SystemPrompt: ' . substr($systemPrompt, 0, 80) . (strlen($systemPrompt) > 80 ? '...' : ''), 0);
         
         $llmPayload = json_encode([
-            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}',
+            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
             'Function' => 'ForwardToLLM',
             'Buffer' => [
                 'SystemPrompt' => $systemPrompt,
@@ -147,7 +147,7 @@ class VoiceCharacterDevice extends IPSModule
         $this->SendDebug('│ Speak', "   VoiceID: $voiceId | ModelID: $modelId", 0);
         
         $ttsPayload = json_encode([
-            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}',
+            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
             'Function' => 'ForwardToElevenLabs',
             'Buffer' => [
                 'Text' => $enhancedText,
@@ -301,7 +301,7 @@ class VoiceCharacterDevice extends IPSModule
         $this->SendDebug('TestDataFlow', 'Sende Test-Payload an Gateway...', 0);
         
         $payload = json_encode([
-            'DataID' => '{597658C0-741E-47C2-AF94-734B0B7F839A}',
+            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
             'Function' => 'ForwardToLLM',
             'Buffer' => [
                 'SystemPrompt' => $systemPrompt,
