@@ -12,10 +12,20 @@
       "caption": "ElevenLabs API Key"
     },
     {
+      "type": "ValidationTextBox",
+      "name": "LLM_Base_URL",
+      "caption": "LLM Base URL"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "LLM_Model",
+      "caption": "LLM Model"
+    },
+    {
       "type": "SelectInstance",
       "name": "DefaultCharacter_ID",
       "caption": "Default Voice Character",
-      "moduleID": "{7A578673-219C-400A-9D80-60DAE5C1B85D}"
+      "moduleID": "{4F3D4E5F-6A7B-4C8D-0E9F-1A2B3C4D5E6F}"
     }
   ],
   "actions": [],
