@@ -103,8 +103,14 @@ class VoiceAssistantGateway extends IPSModule
                 break;
             case 'ForwardToElevenLabs':
                 $this->SendDebug('│ ForwardData', '▶ Rufe ForwardToElevenLabs auf...', 0);
-                $result = $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
-                $this->SendDebug('│ ForwardData', '◀ TTS Ergebnis-Länge: ' . strlen($result) . ' Bytes', 0);
+                $rawAudio = $this->ForwardToElevenLabs($buffer['Text'], $buffer['VoiceID'], $buffer['ModelID']);
+                $this->SendDebug('│ ForwardData', '◀ TTS Roh-Audio: ' . strlen($rawAudio) . ' Bytes', 0);
+                // WICHTIG: Binäre Audio-Daten MÜSSEN base64-kodiert werden,
+                // da der DataFlow-Rückkanal keine Binärdaten transportieren kann!
+                if (!empty($rawAudio)) {
+                    $result = base64_encode($rawAudio);
+                    $this->SendDebug('│ ForwardData', '◀ Base64-kodiert: ' . strlen($result) . ' Zeichen', 0);
+                }
                 break;
             default:
                 $this->SendDebug('│ ForwardData ❌', 'Unbekannte Funktion: ' . $function, 0);

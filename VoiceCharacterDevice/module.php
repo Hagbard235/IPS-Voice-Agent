@@ -168,7 +168,7 @@ class VoiceCharacterDevice extends IPSModule
         }
 
         $audioLen = strlen($audioStream);
-        $this->SendDebug('│ Speak', '📥 TTS-Antwort: ' . ($audioLen == 0 ? '❌ LEER' : "✅ $audioLen Bytes Audio"), 0);
+        $this->SendDebug('│ Speak', '📥 TTS-Antwort (base64): ' . ($audioLen == 0 ? '❌ LEER' : "✅ $audioLen Zeichen base64"), 0);
 
         if (empty($audioStream)) {
             $this->SendDebug('│ Speak ❌', 'TTS lieferte keinen Audio-Stream. Fallback auf Cache...', 0);
@@ -177,11 +177,21 @@ class VoiceCharacterDevice extends IPSModule
             return $result;
         }
 
+        // WICHTIG: Audio kommt base64-kodiert vom Gateway zurück (Binärdaten überleben den DataFlow nicht roh)
+        $audioData = base64_decode($audioStream, true);
+        if ($audioData === false) {
+            $this->SendDebug('│ Speak ❌', 'Base64-Dekodierung fehlgeschlagen! Daten sind kein gültiges Base64.', 0);
+            $result = $this->FallbackToCache($existingFiles, $BaseText);
+            $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
+            return $result;
+        }
+        $this->SendDebug('│ Speak', '✅ Base64 dekodiert: ' . strlen($audioData) . ' Bytes Audio', 0);
+
         // 5. Speichern und Registrieren
         $newFilename = $EventName . '_' . ($fileCount + 1) . '.mp3';
         $fullFilePath = $dir . $newFilename;
         $this->SendDebug('│ Speak', '💾 Speichere Datei: ' . $fullFilePath, 0);
-        file_put_contents($fullFilePath, $audioStream);
+        file_put_contents($fullFilePath, $audioData);
         $this->SendDebug('│ Speak', '✅ Datei gespeichert (' . filesize($fullFilePath) . ' Bytes)', 0);
 
         // Recycling: Existiert das Media Objekt schon?
