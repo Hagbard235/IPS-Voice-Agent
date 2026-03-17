@@ -2,24 +2,78 @@
   "elements":
   [
     {
-      "type": "PasswordTextBox",
-      "name": "OpenAIKey",
-      "caption": "OpenAI API Key"
+      "type": "ExpansionPanel",
+      "caption": "🔑 API-Schlüssel",
+      "items": [
+        {
+          "type": "PasswordTextBox",
+          "name": "OpenAIKey",
+          "caption": "OpenAI API Key"
+        },
+        {
+          "type": "PasswordTextBox",
+          "name": "ElevenLabsKey",
+          "caption": "ElevenLabs API Key"
+        }
+      ]
     },
     {
-      "type": "PasswordTextBox",
-      "name": "ElevenLabsKey",
-      "caption": "ElevenLabs API Key"
+      "type": "ExpansionPanel",
+      "caption": "🤖 LLM Konfiguration",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "LLM_Base_URL",
+          "caption": "LLM Base URL"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "LLM_Model",
+          "caption": "LLM Model"
+        }
+      ]
     },
     {
-      "type": "ValidationTextBox",
-      "name": "LLM_Base_URL",
-      "caption": "LLM Base URL"
+      "type": "ExpansionPanel",
+      "caption": "🌐 Webserver / FTP Upload",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "FTP_Host",
+          "caption": "FTP Host"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "FTP_User",
+          "caption": "FTP Benutzer"
+        },
+        {
+          "type": "PasswordTextBox",
+          "name": "FTP_Password",
+          "caption": "FTP Passwort"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "FTP_RemotePath",
+          "caption": "FTP Remote-Pfad (z.B. /voice/)"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "Webserver_BaseURL",
+          "caption": "Webserver Base URL (z.B. https://in-the-net.de/voice/)"
+        }
+      ]
     },
     {
-      "type": "ValidationTextBox",
-      "name": "LLM_Model",
-      "caption": "LLM Model"
+      "type": "ExpansionPanel",
+      "caption": "🔊 Echo / Alexa",
+      "items": [
+        {
+          "type": "SelectInstance",
+          "name": "EchoRemote_ID",
+          "caption": "EchoRemote Instanz"
+        }
+      ]
     },
     {
       "type": "SelectInstance",
@@ -84,6 +138,17 @@
           "type": "Button",
           "caption": "🚀 TTS Test senden",
           "onClick": "echo IVG_TestTTS($id, $TestTTS_Text, $TestTTS_VoiceID, $TestTTS_ModelID);"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "🧪 Test: FTP Upload",
+      "items": [
+        {
+          "type": "Button",
+          "caption": "🚀 FTP-Verbindung testen",
+          "onClick": "echo IVG_TestFTP($id);"
         }
       ]
     },

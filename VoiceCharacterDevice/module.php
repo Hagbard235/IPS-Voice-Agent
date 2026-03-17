@@ -6,7 +6,6 @@ class VoiceCharacterDevice extends IPSModule
 {
     public function Create()
     {
-        // Never delete this line!
         parent::Create();
 
         $this->RegisterPropertyString('Name', 'New Character');
@@ -16,37 +15,28 @@ class VoiceCharacterDevice extends IPSModule
         $this->RegisterPropertyInteger('Character_Image', 0);
         $this->RegisterPropertyInteger('Max_Variations', 3);
 
-        // Status Variables specific to the character
         $this->RegisterVariableString('LastSpokenText', 'Last Spoken Text', '', 10);
         $this->RegisterVariableInteger('LastMediaID', 'Last Media ID', '', 20);
+        $this->RegisterVariableString('LastAudioURL', 'Last Audio URL', '', 30);
     }
 
     public function ApplyChanges()
     {
-        // Never delete this line!
         parent::ApplyChanges();
-
         $this->CreateMediaDirectory();
 
-        // Konfiguration validieren
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $name = $this->ReadPropertyString('Name');
 
         if (!$this->HasActiveParent()) {
-            $this->SetStatus(201); // Kein Gateway
-            $this->SendDebug('ApplyChanges', '❌ Kein aktives Gateway verbunden!', 0);
+            $this->SetStatus(201);
+            $this->SendDebug('ApplyChanges', '❌ Kein Gateway!', 0);
         } elseif (empty($voiceId)) {
-            $this->SetStatus(200); // Konfiguration unvollständig
-            $this->SendDebug('ApplyChanges', '⚠️ Voice ID ist leer!', 0);
+            $this->SetStatus(200);
+            $this->SendDebug('ApplyChanges', '⚠️ Voice ID leer!', 0);
         } else {
-            $this->SetStatus(102); // Aktiv
-            $this->SendDebug('ApplyChanges', "✅ Charakter '$name' aktiv. Voice ID: $voiceId", 0);
-        }
-
-        // Verbindungsinfo loggen
-        if ($this->HasActiveParent()) {
-            $parentID = IPS_GetInstance($this->InstanceID)['ConnectionID'];
-            $this->SendDebug('ApplyChanges', '🔗 Verbunden mit Gateway-ID: ' . $parentID, 0);
+            $this->SetStatus(102);
+            $this->SendDebug('ApplyChanges', "✅ '$name' aktiv.", 0);
         }
     }
 
@@ -55,171 +45,219 @@ class VoiceCharacterDevice extends IPSModule
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID;
         if (!is_dir($dir)) {
             mkdir($dir, 0777, true);
-            $this->SendDebug('CreateMediaDirectory', '📁 Verzeichnis erstellt: ' . $dir, 0);
+            $this->SendDebug('CreateMediaDirectory', '📁 Erstellt: ' . $dir, 0);
         }
     }
 
-    // ─────────────────────────────────────────
+    // ═══════════════════════════════════════════
     //  Speak (Hauptprozess)
-    // ─────────────────────────────────────────
+    // ═══════════════════════════════════════════
 
     public function Speak(string $EventName, string $BaseText): int
     {
         $this->SendDebug('┌─ Speak', '═══════════════════════════════════════', 0);
-        $this->SendDebug('│ Speak', 'Event: ' . $EventName, 0);
-        $this->SendDebug('│ Speak', 'Text: ' . $BaseText, 0);
+        $this->SendDebug('│ Speak', "Event: $EventName | Text: $BaseText", 0);
 
         $maxVariations = $this->ReadPropertyInteger('Max_Variations');
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID . DIRECTORY_SEPARATOR;
-        $this->SendDebug('│ Speak', 'Media-Verzeichnis: ' . $dir, 0);
-        $this->SendDebug('│ Speak', 'Max Variationen: ' . $maxVariations, 0);
 
         $searchPattern = $dir . $EventName . '_*.mp3';
         $existingFiles = glob($searchPattern);
         $fileCount = $existingFiles !== false ? count($existingFiles) : 0;
-        $this->SendDebug('│ Speak', "Gefundene Dateien für '$EventName': $fileCount (Pattern: $searchPattern)", 0);
+        $this->SendDebug('│ Speak', "Cache: $fileCount / $maxVariations Variationen", 0);
 
         // 1. Cache Check
         if ($fileCount >= $maxVariations && $fileCount > 0) {
             $randomFile = $existingFiles[array_rand($existingFiles)];
-            $this->SendDebug('│ Speak', '🎯 Cache-Hit! Verwende: ' . basename($randomFile), 0);
+            $this->SendDebug('│ Speak', '🎯 Cache-Hit: ' . basename($randomFile), 0);
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
             if ($mediaId > 0) {
-                $this->SendDebug('│ Speak ✅', 'Cache-MediaID: ' . $mediaId, 0);
                 $this->UpdateStatusVariables($BaseText, $mediaId);
+                $this->SendDebug('│ Speak ✅', 'Cache MediaID: ' . $mediaId, 0);
                 $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
                 return $mediaId;
             }
-            $this->SendDebug('│ Speak ⚠️', 'Datei existiert, aber kein IPS-Media-Objekt gefunden. Generiere neu...', 0);
         }
 
-        // 2. Parent / Gateway Validierung
+        // 2. Gateway Check
         if (!$this->HasActiveParent()) {
-            $this->SendDebug('│ Speak ❌', 'Kein aktives Gateway verbunden!', 0);
-            IPS_LogMessage('VoiceCharacterDevice', 'Kein aktives Gateway gefunden.');
+            $this->SendDebug('│ Speak ❌', 'Kein Gateway!', 0);
+            IPS_LogMessage('VoiceCharacterDevice', 'Kein aktives Gateway.');
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
 
-        $parentID = IPS_GetInstance($this->InstanceID)['ConnectionID'];
-        $this->SendDebug('│ Speak', '🔗 Gateway-ID: ' . $parentID, 0);
-
-        // 3. LLM API Call via DataFlow
+        // 3. LLM via DataFlow
         $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
-        $this->SendDebug('│ Speak', '📤 Sende LLM-Request an Gateway...', 0);
-        $this->SendDebug('│ Speak', '   SystemPrompt: ' . substr($systemPrompt, 0, 80) . (strlen($systemPrompt) > 80 ? '...' : ''), 0);
+        $this->SendDebug('│ Speak', '📤 LLM-Request...', 0);
         
-        $llmPayload = json_encode([
-            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
-            'Function' => 'ForwardToLLM',
-            'Buffer' => [
-                'SystemPrompt' => $systemPrompt,
-                'BaseText' => $BaseText,
-                'EventName' => $EventName
-            ]
-        ]);
-        $this->SendDebug('│ Speak', 'LLM Payload: ' . $llmPayload, 0);
-
         try {
-            $enhancedText = $this->SendDataToParent($llmPayload);
+            $enhancedText = $this->SendDataToParent(json_encode([
+                'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}',
+                'Function' => 'ForwardToLLM',
+                'Buffer' => [
+                    'SystemPrompt' => $systemPrompt,
+                    'BaseText' => $BaseText,
+                    'EventName' => $EventName
+                ]
+            ]));
         } catch (\Exception $e) {
-            $this->SendDebug('│ Speak ❌', 'SendDataToParent Exception: ' . $e->getMessage(), 0);
-            IPS_LogMessage('VoiceCharacterDevice', 'SendDataToParent für LLM fehlgeschlagen: ' . $e->getMessage());
+            $this->SendDebug('│ Speak ❌', 'LLM Exception: ' . $e->getMessage(), 0);
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
 
-        $this->SendDebug('│ Speak', '📥 LLM-Antwort: ' . (empty($enhancedText) ? '❌ LEER' : '✅ ' . substr($enhancedText, 0, 200)), 0);
+        $this->SendDebug('│ Speak', '📥 LLM: ' . (empty($enhancedText) ? '❌ LEER' : '✅ ' . substr($enhancedText, 0, 150)), 0);
 
         if (empty($enhancedText)) {
-            $this->SendDebug('│ Speak ❌', 'LLM lieferte leeren Text. Fallback auf Cache...', 0);
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
 
-        // 4. ElevenLabs API Call via DataFlow
+        // 4. TTS via DataFlow
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
-        $this->SendDebug('│ Speak', '📤 Sende TTS-Request an Gateway...', 0);
-        $this->SendDebug('│ Speak', "   VoiceID: $voiceId | ModelID: $modelId", 0);
+        $this->SendDebug('│ Speak', "📤 TTS-Request... VoiceID: $voiceId", 0);
         
-        $ttsPayload = json_encode([
-            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
-            'Function' => 'ForwardToElevenLabs',
-            'Buffer' => [
-                'Text' => $enhancedText,
-                'VoiceID' => $voiceId,
-                'ModelID' => $modelId
-            ]
-        ]);
-        $this->SendDebug('│ Speak', 'TTS Payload (Länge: ' . strlen($ttsPayload) . ')', 0);
-
         try {
-            $audioStream = $this->SendDataToParent($ttsPayload);
+            $audioBase64 = $this->SendDataToParent(json_encode([
+                'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}',
+                'Function' => 'ForwardToElevenLabs',
+                'Buffer' => [
+                    'Text' => $enhancedText,
+                    'VoiceID' => $voiceId,
+                    'ModelID' => $modelId
+                ]
+            ]));
         } catch (\Exception $e) {
-            $this->SendDebug('│ Speak ❌', 'SendDataToParent Exception (TTS): ' . $e->getMessage(), 0);
-            IPS_LogMessage('VoiceCharacterDevice', 'SendDataToParent für TTS fehlgeschlagen: ' . $e->getMessage());
+            $this->SendDebug('│ Speak ❌', 'TTS Exception: ' . $e->getMessage(), 0);
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
 
-        $audioLen = strlen($audioStream);
-        $this->SendDebug('│ Speak', '📥 TTS-Antwort (base64): ' . ($audioLen == 0 ? '❌ LEER' : "✅ $audioLen Zeichen base64"), 0);
-
-        if (empty($audioStream)) {
-            $this->SendDebug('│ Speak ❌', 'TTS lieferte keinen Audio-Stream. Fallback auf Cache...', 0);
+        if (empty($audioBase64)) {
+            $this->SendDebug('│ Speak ❌', 'TTS: leere Antwort', 0);
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
 
-        // WICHTIG: Audio kommt base64-kodiert vom Gateway zurück (Binärdaten überleben den DataFlow nicht roh)
-        $audioData = base64_decode($audioStream, true);
+        // 5. Base64 → Binary
+        $audioData = base64_decode($audioBase64, true);
         if ($audioData === false) {
-            $this->SendDebug('│ Speak ❌', 'Base64-Dekodierung fehlgeschlagen! Daten sind kein gültiges Base64.', 0);
+            $this->SendDebug('│ Speak ❌', 'Base64-Dekodierung fehlgeschlagen!', 0);
             $result = $this->FallbackToCache($existingFiles, $BaseText);
             $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
             return $result;
         }
-        $this->SendDebug('│ Speak', '✅ Base64 dekodiert: ' . strlen($audioData) . ' Bytes Audio', 0);
+        $this->SendDebug('│ Speak', '✅ Audio dekodiert: ' . strlen($audioData) . ' Bytes', 0);
 
-        // 5. Speichern und Registrieren
+        // 6. Speichern
         $newFilename = $EventName . '_' . ($fileCount + 1) . '.mp3';
         $fullFilePath = $dir . $newFilename;
-        $this->SendDebug('│ Speak', '💾 Speichere Datei: ' . $fullFilePath, 0);
         file_put_contents($fullFilePath, $audioData);
-        $this->SendDebug('│ Speak', '✅ Datei gespeichert (' . filesize($fullFilePath) . ' Bytes)', 0);
+        $this->SendDebug('│ Speak', '💾 Gespeichert: ' . $fullFilePath . ' (' . filesize($fullFilePath) . ' Bytes)', 0);
 
-        // Recycling: Existiert das Media Objekt schon?
+        // 7. IPS Media-Objekt
         $mediaId = $this->GetMediaIdByFilename($newFilename);
-        
         if ($mediaId === 0) {
             $mediaId = IPS_CreateMedia(1);
             IPS_SetParent($mediaId, $this->InstanceID);
             IPS_SetName($mediaId, $EventName . ' - Variation ' . ($fileCount + 1));
-            $this->SendDebug('│ Speak', '📎 Neues Media-Objekt erstellt: ID ' . $mediaId, 0);
-        } else {
-            $this->SendDebug('│ Speak', '♻️ Bestehendes Media-Objekt wiederverwendet: ID ' . $mediaId, 0);
+            $this->SendDebug('│ Speak', '📎 Media erstellt: ID ' . $mediaId, 0);
         }
         
-        // ZWINGEND: Forward Slashes für die IPS Media-Registrierung
         $relativeMediaDir = 'media/voice_' . $this->InstanceID . '/';
         IPS_SetMediaFile($mediaId, $relativeMediaDir . $newFilename, false);
-        $this->SendDebug('│ Speak', '📎 Media registriert: ' . $relativeMediaDir . $newFilename, 0);
+
+        // 8. FTP Upload → öffentliche URL
+        $this->SendDebug('│ Speak', '📤 FTP Upload...', 0);
+        try {
+            $publicURL = $this->SendDataToParent(json_encode([
+                'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}',
+                'Function' => 'UploadToWebserver',
+                'Buffer' => [
+                    'FilePath' => $fullFilePath,
+                    'FileName' => $newFilename
+                ]
+            ]));
+        } catch (\Exception $e) {
+            $this->SendDebug('│ Speak ⚠️', 'FTP Upload Exception: ' . $e->getMessage(), 0);
+            $publicURL = '';
+        }
+
+        if (!empty($publicURL)) {
+            $this->SendDebug('│ Speak ✅', 'Public URL: ' . $publicURL, 0);
+            $this->SetValue('LastAudioURL', $publicURL);
+        } else {
+            $this->SendDebug('│ Speak ⚠️', 'FTP Upload fehlgeschlagen (MP3 trotzdem lokal gespeichert)', 0);
+        }
 
         $this->UpdateStatusVariables($BaseText, $mediaId);
-        $this->SendDebug('│ Speak ✅', "Erfolgreich! MediaID: $mediaId", 0);
+        $this->SendDebug('│ Speak ✅', "MediaID: $mediaId", 0);
         $this->SendDebug('└─ Speak', '═══════════════════════════════════════', 0);
         return $mediaId;
     }
 
-    // ─────────────────────────────────────────
+    // ═══════════════════════════════════════════
+    //  SpeakAndAnnounce (Speak + Upload + Echo)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Vollständiger Durchlauf: Speak + FTP Upload + Echo Announce
+     * @param string $EventName Event-Name
+     * @param string $BaseText Basis-Text
+     * @param string $EchoDevicesJSON JSON-Array der Echo-Geräte-Seriennummern
+     */
+    public function SpeakAndAnnounce(string $EventName, string $BaseText, string $EchoDevicesJSON): int
+    {
+        $this->SendDebug('SpeakAndAnnounce', "Event: $EventName | Echos: $EchoDevicesJSON", 0);
+
+        // 1. Speak (generiert MP3 + Upload)
+        $mediaId = $this->Speak($EventName, $BaseText);
+
+        if ($mediaId === 0) {
+            $this->SendDebug('SpeakAndAnnounce ❌', 'Speak fehlgeschlagen, kein Announce.', 0);
+            return 0;
+        }
+
+        // 2. Echo Announce
+        $publicURL = $this->GetValue('LastAudioURL');
+        if (empty($publicURL)) {
+            $this->SendDebug('SpeakAndAnnounce ⚠️', 'Keine Public URL vorhanden, Echo kann MP3 nicht abrufen.', 0);
+            return $mediaId;
+        }
+
+        if (empty($EchoDevicesJSON) || $EchoDevicesJSON === '[]') {
+            $this->SendDebug('SpeakAndAnnounce', 'Kein Echo-Array übergeben, überspringe Announce.', 0);
+            return $mediaId;
+        }
+
+        $this->SendDebug('SpeakAndAnnounce', '📢 Sende an Echo...', 0);
+        try {
+            $this->SendDataToParent(json_encode([
+                'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}',
+                'Function' => 'AnnounceOnEcho',
+                'Buffer' => [
+                    'AudioURL' => $publicURL,
+                    'EchoDevices' => $EchoDevicesJSON
+                ]
+            ]));
+            $this->SendDebug('SpeakAndAnnounce ✅', 'Echo Announce gesendet!', 0);
+        } catch (\Exception $e) {
+            $this->SendDebug('SpeakAndAnnounce ❌', 'Echo Exception: ' . $e->getMessage(), 0);
+        }
+
+        return $mediaId;
+    }
+
+    // ═══════════════════════════════════════════
     //  Hilfsfunktionen
-    // ─────────────────────────────────────────
+    // ═══════════════════════════════════════════
 
     private function GetMediaIdByFilename(string $filename): int
     {
@@ -237,22 +275,19 @@ class VoiceCharacterDevice extends IPSModule
 
     private function FallbackToCache(array $existingFiles, string $baseText): int
     {
-        $this->SendDebug('FallbackToCache', 'Verfügbare Cache-Dateien: ' . count($existingFiles), 0);
+        $this->SendDebug('FallbackToCache', 'Dateien: ' . count($existingFiles), 0);
         if (count($existingFiles) > 0) {
             $randomFile = $existingFiles[array_rand($existingFiles)];
-            $this->SendDebug('FallbackToCache', '🔄 Verwende: ' . basename($randomFile), 0);
             $mediaId = $this->GetMediaIdByFilename(basename($randomFile));
             if ($mediaId > 0) {
-                $this->SendDebug('FallbackToCache ✅', 'Fallback-MediaID: ' . $mediaId, 0);
-                IPS_LogMessage('VoiceCharacterDevice', 'API Fehler - Verwende gecachte Fallback-Datei: ' . basename($randomFile));
+                $this->SendDebug('FallbackToCache ✅', 'Verwende: ' . basename($randomFile), 0);
+                IPS_LogMessage('VoiceCharacterDevice', 'Fallback: ' . basename($randomFile));
                 $this->UpdateStatusVariables($baseText, $mediaId);
                 return $mediaId;
             }
-            $this->SendDebug('FallbackToCache ⚠️', 'Datei vorhanden, aber kein IPS-Media-Objekt gefunden.', 0);
         }
-        
-        $this->SendDebug('FallbackToCache ❌', 'Kein Cache vorhanden. Totaler Ausfall.', 0);
-        IPS_LogMessage('VoiceCharacterDevice', 'Spracherzeugung fehlgeschlagen und kein Cache vorhanden.');
+        $this->SendDebug('FallbackToCache ❌', 'Kein Cache!', 0);
+        IPS_LogMessage('VoiceCharacterDevice', 'Kein Cache vorhanden.');
         return 0;
     }
 
@@ -262,128 +297,113 @@ class VoiceCharacterDevice extends IPSModule
         $this->SetValue('LastMediaID', $mediaId);
     }
 
-    // ─────────────────────────────────────────
-    //  Test-Funktionen (für form.json Actions)
-    // ─────────────────────────────────────────
+    // ═══════════════════════════════════════════
+    //  Test-Funktionen
+    // ═══════════════════════════════════════════
 
-    /**
-     * Test: Vollständiger Speak-Durchlauf
-     */
     public function TestSpeak(string $EventName, string $BaseText): string
     {
-        $this->SendDebug('TestSpeak', '═══ MANUELLER SPEAK-TEST GESTARTET ═══', 0);
-        
-        $name = $this->ReadPropertyString('Name');
-        $voiceId = $this->ReadPropertyString('Voice_ID');
-        $modelId = $this->ReadPropertyString('Model_ID');
-
-        $info = "🎭 Charakter: $name\n🎤 Voice ID: " . (empty($voiceId) ? '❌ NICHT GESETZT' : $voiceId) . "\n🤖 Modell: $modelId\n🏷️ Event: $EventName\n📝 Text: $BaseText\n\n";
-
-        if (empty($voiceId)) {
-            return $info . "❌ Test abgebrochen: Bitte zuerst eine Voice ID konfigurieren.";
-        }
-
+        $this->SendDebug('TestSpeak', '═══ TEST ═══', 0);
         $mediaId = $this->Speak($EventName, $BaseText);
-
         if ($mediaId > 0) {
-            return $info . "✅ Speak-Test erfolgreich!\n\n🎵 Media-ID: " . $mediaId;
+            $url = $this->GetValue('LastAudioURL');
+            $info = "✅ Speak erfolgreich!\n\n🎵 Media-ID: $mediaId";
+            if (!empty($url)) {
+                $info .= "\n🔗 URL: $url";
+            }
+            return $info;
         }
-
-        return $info . "❌ Speak-Test fehlgeschlagen!\n\n→ Details im Debug-Log dieser Instanz und des Gateways.";
+        return "❌ Speak fehlgeschlagen!\n\n→ Debug-Log prüfen.";
     }
 
-    /**
-     * Test: Nur den DataFlow zum Gateway testen (LLM-Aufruf)
-     */
-    public function TestDataFlow(string $TestText): string
+    public function TestSpeakAndAnnounce(string $EventName, string $BaseText, string $EchoDevicesJSON): string
     {
-        $this->SendDebug('TestDataFlow', '═══ MANUELLER DATAFLOW-TEST GESTARTET ═══', 0);
+        $this->SendDebug('TestSpeakAndAnnounce', '═══ TEST ═══', 0);
         
-        if (!$this->HasActiveParent()) {
-            return "❌ Kein Gateway verbunden!\n\nBitte stelle sicher, dass ein Voice Assistant Gateway als übergeordnete Instanz konfiguriert ist.";
+        if (empty($EchoDevicesJSON)) {
+            return "❌ Bitte Echo Devices als JSON-Array angeben!\n\nBeispiel: [\"SERIAL1\",\"SERIAL2\"]";
         }
 
-        $parentID = IPS_GetInstance($this->InstanceID)['ConnectionID'];
-        $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
+        $mediaId = $this->SpeakAndAnnounce($EventName, $BaseText, $EchoDevicesJSON);
+        if ($mediaId > 0) {
+            $url = $this->GetValue('LastAudioURL');
+            $info = "✅ Speak + Announce erfolgreich!\n\n🎵 Media-ID: $mediaId";
+            if (!empty($url)) {
+                $info .= "\n🔗 URL: $url";
+            }
+            $info .= "\n📢 Echo Announce gesendet!";
+            return $info;
+        }
+        return "❌ Fehlgeschlagen!\n\n→ Debug-Log beider Instanzen prüfen.";
+    }
 
-        $info = "🔗 Gateway-ID: $parentID\n📤 Test-Text: $TestText\n📝 System-Prompt: " . substr($systemPrompt, 0, 50) . "...\n\n";
-
-        $this->SendDebug('TestDataFlow', 'Sende Test-Payload an Gateway...', 0);
+    public function TestDataFlow(string $TestText): string
+    {
+        $this->SendDebug('TestDataFlow', '═══ TEST ═══', 0);
         
-        $payload = json_encode([
-            'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}', // MUSS die implemented-GUID des Gateways sein!
-            'Function' => 'ForwardToLLM',
-            'Buffer' => [
-                'SystemPrompt' => $systemPrompt,
-                'BaseText' => $TestText,
-                'EventName' => 'dataflow_test'
-            ]
-        ]);
+        if (!$this->HasActiveParent()) {
+            return "❌ Kein Gateway verbunden!";
+        }
 
+        $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
         try {
-            $result = $this->SendDataToParent($payload);
+            $result = $this->SendDataToParent(json_encode([
+                'DataID' => '{E6892CCF-7622-4217-9150-C1DE886296DD}',
+                'Function' => 'ForwardToLLM',
+                'Buffer' => [
+                    'SystemPrompt' => $systemPrompt,
+                    'BaseText' => $TestText,
+                    'EventName' => 'dataflow_test'
+                ]
+            ]));
         } catch (\Exception $e) {
-            return $info . "❌ SendDataToParent Exception!\n\n" . $e->getMessage() . "\n\n→ Mögliche Ursache: DataID-Mismatch oder Gateway implementiert ForwardData nicht.";
+            return "❌ Exception: " . $e->getMessage();
         }
 
         if (empty($result)) {
-            return $info . "❌ DataFlow-Test fehlgeschlagen!\n\nDas Gateway hat einen leeren String zurückgegeben.\n\n→ Prüfe das Debug-Log des Gateways!";
+            return "❌ Leere Antwort vom Gateway.\n\n→ Debug-Log des Gateways prüfen!";
         }
 
-        return $info . "✅ DataFlow-Test erfolgreich!\n\n📥 LLM-Antwort:\n" . $result;
+        return "✅ DataFlow OK!\n\n📥 LLM-Antwort:\n$result";
     }
 
-    /**
-     * Diagnose: Status und Konfiguration prüfen
-     */
     public function GetDiagnostics(): string
     {
         $name = $this->ReadPropertyString('Name');
         $voiceId = $this->ReadPropertyString('Voice_ID');
         $modelId = $this->ReadPropertyString('Model_ID');
-        $systemPrompt = $this->ReadPropertyString('LLM_SystemPrompt');
-        $maxVariations = $this->ReadPropertyInteger('Max_Variations');
+        $maxVar = $this->ReadPropertyInteger('Max_Variations');
         $hasParent = $this->HasActiveParent();
 
         $dir = IPS_GetKernelDir() . 'media' . DIRECTORY_SEPARATOR . 'voice_' . $this->InstanceID;
-        $dirExists = is_dir($dir);
-        $fileCount = 0;
-        if ($dirExists) {
-            $files = glob($dir . DIRECTORY_SEPARATOR . '*.mp3');
-            $fileCount = $files !== false ? count($files) : 0;
-        }
+        $files = is_dir($dir) ? glob($dir . DIRECTORY_SEPARATOR . '*.mp3') : [];
+        $fileCount = $files !== false ? count($files) : 0;
 
-        $status  = "═══ DIAGNOSE: $name ═══\n\n";
-        $status .= "📋 Instanz-ID: " . $this->InstanceID . "\n";
-        $status .= "🔗 Gateway verbunden: " . ($hasParent ? '✅ Ja' : '❌ Nein') . "\n";
-        
+        $s  = "═══ DIAGNOSE: $name ═══\n\n";
+        $s .= "📋 ID: " . $this->InstanceID . "\n";
+        $s .= "🔗 Gateway: " . ($hasParent ? '✅' : '❌') . "\n";
         if ($hasParent) {
-            $parentID = IPS_GetInstance($this->InstanceID)['ConnectionID'];
-            $status .= "   Gateway-ID: " . $parentID . "\n";
+            $s .= "   Gateway-ID: " . IPS_GetInstance($this->InstanceID)['ConnectionID'] . "\n";
         }
-
-        $status .= "\n── Konfiguration ──\n";
-        $status .= "🎤 Voice ID: " . (empty($voiceId) ? '❌ NICHT GESETZT' : '✅ ' . $voiceId) . "\n";
-        $status .= "🤖 Modell: " . $modelId . "\n";
-        $status .= "📝 System-Prompt: " . (empty($systemPrompt) ? '❌ LEER' : '✅ (' . strlen($systemPrompt) . ' Zeichen)') . "\n";
-        $status .= "🔄 Max Variationen: " . $maxVariations . "\n";
-
-        $status .= "\n── Dateisystem ──\n";
-        $status .= "📁 Verzeichnis: " . ($dirExists ? '✅ ' . $dir : '❌ Nicht vorhanden') . "\n";
-        $status .= "🎵 Gecachte MP3s: " . $fileCount . "\n";
+        $s .= "\n── Konfiguration ──\n";
+        $s .= "🎤 Voice ID: " . (empty($voiceId) ? '❌' : '✅ ' . $voiceId) . "\n";
+        $s .= "🤖 Modell: $modelId\n";
+        $s .= "🔄 Max Variationen: $maxVar\n";
+        $s .= "\n── Cache ──\n";
+        $s .= "📁 Verzeichnis: " . (is_dir($dir) ? '✅' : '❌') . "\n";
+        $s .= "🎵 MP3s: $fileCount\n";
 
         if ($fileCount > 0 && $files !== false) {
-            $status .= "\n── Cache-Dateien ──\n";
-            foreach ($files as $file) {
-                $size = round(filesize($file) / 1024);
-                $status .= "   📄 " . basename($file) . " ({$size} KB)\n";
+            foreach ($files as $f) {
+                $s .= "   📄 " . basename($f) . " (" . round(filesize($f) / 1024) . " KB)\n";
             }
         }
 
-        $status .= "\n── Statusvariablen ──\n";
-        $status .= "📝 Letzter Text: " . $this->GetValue('LastSpokenText') . "\n";
-        $status .= "🎵 Letzte Media-ID: " . $this->GetValue('LastMediaID') . "\n";
+        $s .= "\n── Status ──\n";
+        $s .= "📝 Letzter Text: " . $this->GetValue('LastSpokenText') . "\n";
+        $s .= "🎵 Letzte Media-ID: " . $this->GetValue('LastMediaID') . "\n";
+        $s .= "🔗 Letzte URL: " . $this->GetValue('LastAudioURL') . "\n";
 
-        return $status;
+        return $s;
     }
 }
